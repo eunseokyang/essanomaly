@@ -11,3 +11,17 @@ def set_seed(seed):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
+
+def point_adjustment(gt, pr):
+    flag = False
+    pa = pr.copy()
+    for i in range(len(gt)):
+        if flag:
+            if gt[i] == 1:
+                pa[i] = 1
+            else:
+                flag = False
+        else:
+            if gt[i] == 1:
+                flag = True
+    return pa
