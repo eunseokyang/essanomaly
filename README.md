@@ -1,9 +1,8 @@
-# DeepSVDD for Time-series Anomaly Detection
+# Time-series Anomaly Detection
 
-## Overview
-![overview](figures/overview.jpg)
-
-
+## Models
+- DeepSVDD
+- DAGMM
 
 ## Dataset
 Voltage, Current, SOC, Temperature, Voltage gap
@@ -43,4 +42,5 @@ conda activate essanomaly
 
 ## TODO
 - [x] F1 metric for test data   
+- [x] Point adjustment
 - [ ] Validation
