@@ -55,27 +55,28 @@ class DAGMM(nn.Module):
         self.lambda_energy = lambda_energy
         self.lambda_cov = lambda_cov
         self.n_gmm = n_gmm
+        
         #squeeze raw data
-        self.fc0 = nn.Linear(input_dim, 1)
+        # self.fc0 = nn.Linear(input_dim, 1)
 
         #Encoder network
-        self.fc1 = nn.Linear(window_size, hidden_dim//2)
+        self.fc1 = nn.Linear(window_size*input_dim, hidden_dim//2)
         self.fc2 = nn.Linear(hidden_dim//2, hidden_dim//4)
         self.fc3 = nn.Linear(hidden_dim//4, hidden_dim//8)
-        self.fc4 = nn.Linear(hidden_dim//8, z_dim)
+        self.fc4 = nn.Linear(hidden_dim//8, z_dim*input_dim)
 
         #Decoder network
-        self.fc5 = nn.Linear(z_dim, hidden_dim//8)
+        self.fc5 = nn.Linear(z_dim*input_dim, hidden_dim//8)
         self.fc6 = nn.Linear(hidden_dim//8, hidden_dim//4)
         self.fc7 = nn.Linear(hidden_dim//4, hidden_dim//2)
-        self.fc8 = nn.Linear(hidden_dim//2, window_size)
+        self.fc8 = nn.Linear(hidden_dim//2, window_size*input_dim)
 
         #Estimation network
-        self.fc9 = nn.Linear(z_dim+2, 10)
+        self.fc9 = nn.Linear(z_dim*input_dim+2, 10)
         self.fc10 = nn.Linear(10, self.n_gmm)
 
         #unsqueeze
-        self.fc11 = nn.Linear(1, input_dim)
+        # self.fc11 = nn.Linear(1, input_dim)
 
     def encode(self, x):
         h = torch.tanh(self.fc1(x))
@@ -101,14 +102,18 @@ class DAGMM(nn.Module):
         return relative_euclidean_distance, cosine_similarity
     
     def forward(self, x):
-        x_ori = x.clone()
-        x = self.fc0(x)
-        z_c = self.encode(x.squeeze())
-        x_hat = self.decode(z_c)
-        x_hat_ori = self.fc11(x_hat.unsqueeze(dim=2))
+        x_ori = x.clone()  # (B, W, C)
+        B, W, C = x.shape
+        x = x.view(B, W*C)  # (B, WxC)
+        # x = self.fc0(x)
+        # z_c = self.encode(x.squeeze())
+        z_c = self.encode(x)  # (B, z_dim)
+        x_hat = self.decode(z_c)  # (B, WxC)
+        # x_hat_ori = self.fc11(x_hat.unsqueeze(dim=2))
+        x_hat_ori = x_hat.view(B, W, C)  # (B, W, C)
         rec_1, rec_2 = self.compute_reconstruction(x_ori, x_hat_ori)
-        z = torch.cat([z_c, rec_1.unsqueeze(-1), rec_2.unsqueeze(-1)], dim=1)
-        gamma = self.estimate(z)
+        z = torch.cat([z_c, rec_1.unsqueeze(-1), rec_2.unsqueeze(-1)], dim=1)  # (B, z_dim*input_dim+2)
+        gamma = self.estimate(z) 
         return x_ori, x_hat_ori, z, gamma
     
     def get_loss(self, output):

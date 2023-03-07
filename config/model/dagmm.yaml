@@ -1,11 +1,12 @@
 name: dagmm
 path: "./checkpoints/"
 window_size: 100
-step: 100
+step: 10
 batch_size: 512
 lr: 1e-4
-hidden_dim: 128
-n_gmm : 2
-z_dim : 1
+hidden_dim: 512
+n_gmm : 5
+z_dim : 5
 lambda_energy : 0.01
 lambda_cov : 1e-5
+delT : 10

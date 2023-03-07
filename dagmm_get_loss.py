@@ -40,14 +40,14 @@ class ComputeLoss:
         for k in range(self.n_gmm):
             cov_k = cov[k] + (torch.eye(cov[k].size(-1))*eps).to(self.device)
             # print("cov_k:", cov_k.shape)
-            # cov_inverse.append(torch.inverse(cov_k).unsqueeze(0))
+            # cov_inverse.append(torch.inverse(cov_k).unsqueeze(0)) #### mark
             cov_inverse.append(torch.linalg.pinv(cov_k).unsqueeze(0))
-            # det_cov.append((Cholesky.apply(cov_k.cpu() * (2*np.pi)).diag().prod()).unsqueeze(0))
+            # det_cov.append((Cholesky.apply(cov_k.cpu() * (2*np.pi)).diag().prod()).unsqueeze(0)) #### mark
             det_cov.append(np.linalg.det(cov_k.data.cpu().numpy()*(2*np.pi)))
             cov_diag += torch.sum(1 / cov_k.diag())
         
         cov_inverse = torch.cat(cov_inverse, dim=0)
-        # det_cov = torch.cat(det_cov).to(self.device)
+        # det_cov = torch.cat(det_cov).to(self.device) #### mark
         det_cov = torch.from_numpy(np.float32(np.array(det_cov))).to(self.device)
 
         E_z = -0.5 * torch.sum(torch.sum(z_mu.unsqueeze(-1) * cov_inverse.unsqueeze(0), dim=-2) * z_mu, dim=-1)
@@ -62,10 +62,11 @@ class ComputeLoss:
         # K: number of Gaussian mixture components
         # N: Number of samples
         # D: Latent dimension
-        # z = NxD
+        # z = NxD -> (B, z_dim*input_dim+2)
         # gamma = NxK
 
         #phi = D
+        
         phi = torch.sum(gamma, dim=0)/gamma.size(0) 
 
         #mu = KxD

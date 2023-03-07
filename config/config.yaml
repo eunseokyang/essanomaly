@@ -12,5 +12,5 @@ data:
   dim: 5
 
 train:
-  epochs: 10
+  epochs: 30
   

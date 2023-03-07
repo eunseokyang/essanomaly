@@ -7,7 +7,7 @@ from sklearn.metrics import precision_recall_fscore_support
 import hydra
 import wandb
 
-from util import set_seed
+from util import *
 from dataloader import ESSDataset
 from models import DeepSVDD
 from models import DAGMM 
@@ -74,12 +74,14 @@ def train(cfg):
         train_loss = np.mean(train_losses)
         valid_loss = np.mean(valid_losses)
         print(f"Epoch: {epoch+1} | train loss: {train_loss:.10f}, valid loss: {valid_loss:.10f}")
+        wandb.log({'train loss':train_loss, 'valid_loss':valid_loss})
 
         torch.save(model.state_dict(), model_path / f'{epoch}.pth')
 
 def test(cfg):
     epoch = cfg.train.epochs - 1
-
+    
+    
     model_path = Path(cfg.model.path) / cfg.data.name / cfg.model.name
     device = torch.device(cfg.device)
     
@@ -128,8 +130,8 @@ def test(cfg):
     test_losses = np.concatenate(test_losses, axis=0).reshape(-1)
     test_labels = np.concatenate(test_labels, axis=0).reshape(-1)
 
-    thres = np.quantile(test_losses, q=0.99)
-    test_preds = (test_losses > thres).astype(int)
+    # thres = np.quantile(test_losses, q=0.99)
+    # test_preds = (test_losses > thres).astype(int)
 
 
     if cfg.model.name == 'deepsvdd':
@@ -137,15 +139,20 @@ def test(cfg):
     
     # breakpoint()
 
-    precision, recall, f1, _ = precision_recall_fscore_support(test_labels, test_preds, average='binary')
+    # precision, recall, f1, _ = precision_recall_fscore_support(test_labels, test_preds, average='binary')
+    
+    precision, recall, f1_score, pa = point_adjustment(test_labels, test_losses, anomaly_rate=0.1)
 
-    print(f"precision: {precision:.3f} | recall: {recall:.3f} | f1 score: {f1:.3f}")
-
+    print(f"precision: {precision:.3f} | recall: {recall:.3f} | f1 score: {f1_score:.3f}")
+    wandb.log({'precision':precision, 'recall':recall, 'f1_score':f1_score})
+    
+    print(f'model_path: {model_path}')
     np.save(model_path / 'test_losses.npy', test_losses)
+    # np.save(model_path / 'pa.npy', pa)
 
 @hydra.main(config_path="./config/", config_name="config", version_base='1.2')
 def main(cfg):
-    set_seed(cfg.seed)
+    # set_seed(cfg.seed)
 
     wandb.init(
         project='ESSAnomaly',
@@ -155,8 +162,10 @@ def main(cfg):
 
     if cfg.mode == 'train':
         train(cfg)
-    else:
-        test(cfg)
+    # else:
+    #     test(cfg)
+    
+    test(cfg)
 
 if __name__ == "__main__":
     main()
